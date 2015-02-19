@@ -9,3 +9,7 @@ libdir=${datadir}/lib
 modulesdir=${libdir}/@PYTHON_VER@
 
 AM_CFLAGS =-I$(top_srcdir)/include -I$(top_srcdir)/lib ${PYTHON_CFLAGS}  -Wall -Werror ${GCOV_CFLAGS}
+if USE_SYSTEMD
+AM_CFLAGS += -DWITH_SYSTEMD_DAEMON
+AM_LDFLAGS = -lsystemd-daemon
+endif

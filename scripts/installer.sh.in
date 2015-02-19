@@ -31,7 +31,10 @@ umask 077
 my_dir=`dirname $0`
 
 add_to_startup() {
-    if [ -f /sbin/insserv -o -f /usr/sbin/update-rc.d ] ; then
+    if [[ "$(basename $(readlink /sbin/init))" == systemd ]]; then
+        /usr/bin/systemctl daemon-reload
+        /usr/bin/systemctl enable -f nova-agent.service
+    elif [ -f /sbin/insserv -o -f /usr/sbin/update-rc.d ] ; then
         # Debian style
         if [ -f /sbin/insserv ]; then
             # Debian >= 6.0
@@ -51,16 +54,12 @@ add_to_startup() {
 
         /sbin/rc-update add nova-agent default > /dev/null 2>&1
     elif [ -f /etc/arch-release ] ; then
-        if [[ "$(basename $(readlink /sbin/init))" == systemd ]]; then
-            /usr/bin/systemctl enable -f nova-agent.service
-        else
-            # Arch is a hybrid BSD and SysV style init system. We just need to
-            # install a SysV style script into /etc/rc.d, but then update
-            # /etc/rc.conf to enable it
-            grep -q '^DAEMONS=.*nova-agent' /etc/rc.conf
-            if [ $? -ne 0 ] ; then
-                sed -i.backup 's/^DAEMONS=(\(.*\))/DAEMONS=(nova-agent \1)/' /etc/rc.conf
-            fi
+        # Arch is a hybrid BSD and SysV style init system. We just need to
+        # install a SysV style script into /etc/rc.d, but then update
+        # /etc/rc.conf to enable it
+        grep -q '^DAEMONS=.*nova-agent' /etc/rc.conf
+        if [ $? -ne 0 ] ; then
+            sed -i.backup 's/^DAEMONS=(\(.*\))/DAEMONS=(nova-agent \1)/' /etc/rc.conf
         fi
     elif [ `uname -s` == 'FreeBSD' ] ; then
         # FreeBSD needs nova_agent_enable="YES" added to rc.conf
@@ -102,7 +101,6 @@ cp -R ${my_dir}/${dataversdir} ${dataversdir}
 # Creating Environment Variable file for SYSTEMD service script
 ## condition checking if /sbin/init is symlink to systemd
 if [[ -L /sbin/init && "$(basename $(readlink /sbin/init))" == systemd ]]; then
-  if [ -f /etc/arch-release ] ; then
     NOVA_PYTHONPATH=`ls -l ${reallibdir} | grep '^d' | awk '{print \$NF}'`
     NOVA_PYTHONPATH=`echo ${NOVA_PYTHONPATH} | grep 'python[0-9]\.[0-9]'`
     NOVA_PYTHONPATH="${reallibdir}/${NOVA_PYTHONPATH}"
@@ -114,13 +112,12 @@ if [[ -L /sbin/init && "$(basename $(readlink /sbin/init))" == systemd ]]; then
     cat >> /etc/nova-agent.env <<-EOF
 PYTHONPATH=$PYTHONPATH
 EOF
-  else
-    touch /etc/nova-agent.env
-  fi
 fi
 
 # Install the init file symlink
-if [ -h /sbin/runscript ]; then
+if [[ "$(basename $(readlink /sbin/init))" == systemd ]]; then
+    ln -f ${dataversdir}/etc/systemd/system/nova-agent.service /etc/systemd/system/nova-agent.service
+elif [ -h /sbin/runscript ]; then
     # Gentoo Linux OpenRC style
     rm -f /etc/init.d/nova-agent
     ln -s ${dataversdir}/etc/gentoo/nova-agent /etc/init.d/nova-agent
@@ -129,13 +126,9 @@ elif [ -d /etc/init.d ]; then
     rm -f /etc/init.d/nova-agent
     ln -s ${dataversdir}/etc/generic/nova-agent /etc/init.d/nova-agent
 elif [ -f /etc/arch-release ] ; then
-    if [[ "$(basename $(readlink /sbin/init))" == systemd ]]; then
-        ln -sf ${dataversdir}/etc/systemd/system/nova-agent.service /etc/systemd/system/nova-agent.service
-    else
-        # Arch Linux
-        rm -f /etc/rc.d/nova-agent
-        ln -s ${dataversdir}/etc/generic/nova-agent /etc/rc.d/nova-agent
-    fi
+    # Legacy Arch Linux
+    rm -f /etc/rc.d/nova-agent
+    ln -s ${dataversdir}/etc/generic/nova-agent /etc/rc.d/nova-agent
 elif [ -d /etc/rc.d ]; then
     # FreeBSD
     rm -f /etc/rc.d/nova-agent

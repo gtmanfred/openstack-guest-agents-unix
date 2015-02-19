@@ -31,6 +31,10 @@
 #include "nova-agent_int.h"
 #include "libagent_int.h"
 
+#ifdef WITH_SYSTEMD_DAEMON
+#include <systemd/sd-daemon.h>
+#endif
+
 #define AGENT_DEFAULT_LOG_LEVEL "info"
 #define AGENT_DEFAULT_LOG_FILE "/var/log/nova-agent.log"
 
@@ -366,6 +370,9 @@ int main(int argc, char **argv)
     }
 
     agent_info("Agent " AGENT_VERSION " started");
+#ifdef WITH_SYSTEMD_DAEMON
+    sd_notify(0, "READY=1\n");
+#endif
 
     _agent_signal_loop();
 

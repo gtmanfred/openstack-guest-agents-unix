@@ -1,7 +1,10 @@
 [Unit]
 Description=nova-agent service
+Before=cloud-init.service cloud-init-local.service cloud-config.service cloud-final.service
+Requires=cloud-init.service cloud-init-local.service cloud-config.service cloud-final.service
 
 [Service]
+Type=notify
 Environment=LD_LIBRARY_PATH=@prefix@/share/@PACKAGE@/@PACKAGE_VERSION@/lib
 EnvironmentFile=-/etc/nova-agent.env
 ExecStart=@prefix@/sbin/nova-agent -n -l info @prefix@/share/@PACKAGE@/nova-agent.py

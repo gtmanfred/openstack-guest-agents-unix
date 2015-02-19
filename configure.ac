@@ -101,11 +101,19 @@ int main(int argc, char **argv)
 LIBS=$SAVE_LIBS
 CFLAGS=$SAVE_CFLAGS
 
-AC_CHECK_PROG([PATCHELF], [patchelf], [yes])
-if test "$PATCHELF" != "yes"; then
-    missing "patchelf"
-    exit 1
-fi
+PKG_PROG_PKG_CONFIG
+
+AC_ARG_WITH([systemd],
+  [AS_HELP_STRING([--with-systemd],
+    [support handling systemd daemon @<:@default=check@:>@])],
+  [],
+  [with_systemd=check])
+AS_CASE(["$with_systemd"],
+  [yes], [PKG_CHECK_MODULES([systemd], [systemd], [HAVE_SYSTEMD=1])],
+  [no], [],
+  [PKG_CHECK_MODULES([systemd], [systemd], [HAVE_SYSTEMD=1], [HAVE_SYSTEMD=0])])
+AM_CONDITIONAL([USE_SYSTEMD], [test "$with_systemd" != no -a "$HAVE_SYSTEMD" -eq 1])
+
 
 # Check for certain headers
 AC_CHECK_HEADERS(crypt.h)

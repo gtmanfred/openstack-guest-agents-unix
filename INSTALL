@@ -7,8 +7,15 @@ pip install pyxenstore
 
 CentOS/RedHat, etc:
 
-(Will update this later.  Use the packages above as a guide)
-
+add repo for your version from http://au1.mirror.crc.id.au/repo/
+yum install gcc gcc-c++ automake libtool python-devel python-pip \
+    xen45-devel python-jsonpointer python-jsonpatch
+install patchelf http://nixos.org/patchelf.html
+  curl -L http://nixos.org/releases/patchelf/patchelf-0.8/patchelf-0.8.tar.gz | tar xz
+  cd patchelf-0.8
+  ./configure
+  make install
+pip install pyxenstore
 
 The following is needed for make install or make bintar:
 
